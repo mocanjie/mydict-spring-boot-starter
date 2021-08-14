@@ -1,6 +1,5 @@
 package com.gcloud.tools.dict;
 
-import com.gcloud.tools.dict.utils.MyDictUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,8 +9,8 @@ import org.springframework.context.annotation.Configuration;
 public class DictAutoConfiguration {
 
     @Bean
-    public MyDictUtils getMyDictUtils(){
-        return new MyDictUtils();
+    public MyDictHelper getDictHelper(IMyDict myDict){
+        return new MyDictHelper(myDict);
     }
 
 }

@@ -92,8 +92,8 @@ public class MyDictProcess extends AbstractProcessor {
         statements.append(treeMaker.Return(
                 treeMaker.Apply(
                         List.<JCTree.JCExpression>nil(),
-                        treeMaker.Select(memberAccess("com.gcloud.tools.dict.utils.MyDictUtils"),
-                                            elementUtils.getName("getDictDescribe")),
+                        treeMaker.Select(memberAccess("com.gcloud.tools.dict.MyDictHelper"),
+                                            elementUtils.getName("getDesc")),
                         List.<JCTree.JCExpression>of(
                                 treeMaker.Literal(annotation.name()),
                                 treeMaker.Select(treeMaker.Ident(names.fromString("this")), jcVariableDecl.getName())
