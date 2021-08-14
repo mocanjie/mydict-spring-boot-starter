@@ -23,7 +23,13 @@ public class TestVO {
 
 ## 使用方法：
 
-### 1、导入jar,并加入pom.xml依赖
+### 1、执行mvn clean package 打包jar
+
+#####  mydict-spring-boot-starter-1.0.jar
+
+
+
+### 2、导入jar到你的项目中,并加入pom.xml依赖
 
 ```xml
 <dependency>
@@ -35,7 +41,7 @@ public class TestVO {
 </dependency>
 ```
 
-### 2、实现字典接口 IMyDict的getDesc方法
+### 3、实现字典接口 IMyDict的getDesc方法
 
 ```java
 @Component
