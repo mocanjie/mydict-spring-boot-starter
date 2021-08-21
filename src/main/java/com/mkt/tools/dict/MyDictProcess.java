@@ -1,4 +1,4 @@
-package com.gcloud.tools.dict;
+package com.mkt.tools.dict;
 
 import com.sun.tools.javac.api.JavacTrees;
 import com.sun.tools.javac.code.Flags;
@@ -14,7 +14,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import java.util.Set;
 
-@SupportedAnnotationTypes({"com.gcloud.tools.dict.MyDict"})
+@SupportedAnnotationTypes({"com.mkt.tools.dict.MyDict"})
 public class MyDictProcess extends AbstractProcessor {
 
     private Messager messager;
@@ -92,7 +92,7 @@ public class MyDictProcess extends AbstractProcessor {
         statements.append(treeMaker.Return(
                 treeMaker.Apply(
                         List.<JCTree.JCExpression>nil(),
-                        treeMaker.Select(memberAccess("com.gcloud.tools.dict.MyDictHelper"),
+                        treeMaker.Select(memberAccess("com.mkt.tools.dict.MyDictHelper"),
                                             elementUtils.getName("getDesc")),
                         List.<JCTree.JCExpression>of(
                                 treeMaker.Literal(annotation.name()),

@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.gcloud.tools.dict.DictAutoConfiguration
+com.mkt.tools.dict.DictAutoConfiguration

@@ -33,7 +33,7 @@ public class TestVO {
 
 ```xml
 <dependency>
-    <groupId>com.gcloud.tools</groupId>
+    <groupId>com.mkt.tools</groupId>
     <artifactId>mydict-spring-boot-starter</artifactId>
     <version>1.0.0</version>
     <scope>system</scope>

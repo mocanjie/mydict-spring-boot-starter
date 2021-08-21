@@ -1,4 +1,4 @@
-package com.gcloud.tools.dict;
+package com.mkt.tools.dict;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
