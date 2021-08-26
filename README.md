@@ -19,29 +19,20 @@ public class TestVO {
     private String goodsTypeDesc;
 ```
 
+## 使用方法
 
-
-## 使用方法：
-
-### 1、执行mvn clean package 打包jar
-
-#####  mydict-spring-boot-starter-1.0.jar
-
-
-
-### 2、导入jar到你的项目中,并加入pom.xml依赖
+### 1、配置项目pom.xml
 
 ```xml
 <dependency>
-    <groupId>com.mkt.tools</groupId>
+    <groupId>io.github.mocanjie</groupId>
     <artifactId>mydict-spring-boot-starter</artifactId>
-    <version>1.0.0</version>
-    <scope>system</scope>
-    <systemPath>${pom.basedir}/lib/mydict-spring-boot-starter-1.0.jar</systemPath>
+    <version>1.0</version>
 </dependency>
 ```
 
-### 3、实现字典接口 IMyDict的getDesc方法
+
+### 2、实现字典接口 IMyDict的getDesc方法
 
 ```java
 @Component
@@ -61,8 +52,7 @@ public class DictImpl implements IMyDict {
 ```
 
 
-
-## IDEA下需要如下设置
+## IDEA开发环境下还需要如下设置
 
 #### 配置项 ： File 》 Settings 》 Build，Execution，Deployment 》 Complier 》Shared build process VM options  
 
