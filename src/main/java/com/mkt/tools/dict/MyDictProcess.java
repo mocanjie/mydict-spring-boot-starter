@@ -8,7 +8,10 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.*;
 
-import javax.annotation.processing.*;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -17,7 +20,6 @@ import java.util.Set;
 @SupportedAnnotationTypes({"com.mkt.tools.dict.MyDict"})
 public class MyDictProcess extends AbstractProcessor {
 
-    private Messager messager;
     private JavacTrees trees;
     private TreeMaker treeMaker;
     private Names names;
@@ -49,12 +51,6 @@ public class MyDictProcess extends AbstractProcessor {
         return true;
     }
 
-    /**
-     * 变量是否已存在
-     * @param jcClassDecl
-     * @param jcVariableDecl
-     * @return false不存在，true存在
-     */
     private boolean isVariableExist(JCTree.JCClassDecl jcClassDecl, JCTree.JCVariableDecl jcVariableDecl){
         Name dictVarName = getNewDictVarName(jcVariableDecl.getName());
         return jcClassDecl.defs.stream().filter(x -> {
@@ -117,7 +113,6 @@ public class MyDictProcess extends AbstractProcessor {
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        this.messager = processingEnv.getMessager();
         this.trees = JavacTrees.instance(processingEnv);
         Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
         this.treeMaker = TreeMaker.instance(context);
