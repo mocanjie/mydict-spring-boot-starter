@@ -1,4 +1,4 @@
-package com.mkt.tools.dict;
+package io.github.mocanjie.tools.dict;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

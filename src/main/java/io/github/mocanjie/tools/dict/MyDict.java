@@ -1,4 +1,4 @@
-package com.mkt.tools.dict;
+package io.github.mocanjie.tools.dict;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
