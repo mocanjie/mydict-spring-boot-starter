@@ -8,6 +8,8 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.*;
+import io.github.mocanjie.tools.dict.entity.Var;
+import io.github.mocanjie.tools.dict.entity.VarType;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -33,18 +35,20 @@ public class MyDictProcess extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+
         elementUtils = (JavacElements) processingEnv.getElementUtils();
         Set<? extends VariableElement> set = (Set<? extends VariableElement>) roundEnv.getElementsAnnotatedWith(MyDict.class);
+
         for (VariableElement variableElement : set) {
             JCTree.JCVariableDecl jcVariableDecl = (JCTree.JCVariableDecl) trees.getTree(variableElement);
             JCTree.JCClassDecl jcClassDecl = (JCTree.JCClassDecl) trees.getTree(variableElement.getEnclosingElement());
             if(isVariableExist(jcClassDecl,jcVariableDecl)) continue;
+            MyDict annotation = variableElement.getAnnotation(MyDict.class);
             //生成变量
-            JCTree.JCVariableDecl dictVariableDecl = makeDictDescFieldDecl(jcVariableDecl);
+            JCTree.JCVariableDecl dictVariableDecl = makeDictDescFieldDecl(jcVariableDecl,annotation);
             jcClassDecl.defs = jcClassDecl.defs.append(dictVariableDecl);
             //生成get方法
             try {
-                MyDict annotation = variableElement.getAnnotation(MyDict.class);
                 JCTree.JCMethodDecl dictMethodDecl = makeGetterMethodDecl(jcVariableDecl, annotation);
                 jcClassDecl.defs = jcClassDecl.defs.append(dictMethodDecl);
             }catch (Exception e){}
@@ -67,9 +71,46 @@ public class MyDictProcess extends AbstractProcessor {
         }).findAny().isPresent();
     }
 
-    private JCTree.JCVariableDecl makeDictDescFieldDecl(JCTree.JCVariableDecl jcVariableDecl) {
+    private JCTree.JCVariableDecl makeDictDescFieldDecl(JCTree.JCVariableDecl jcVariableDecl,MyDict dict) {
         treeMaker.pos = jcVariableDecl.pos;
-        return treeMaker.VarDef(treeMaker.Modifiers(jcVariableDecl.getModifiers().flags),getNewDictVarName(jcVariableDecl.getName()),memberAccess("java.lang.String"), null);
+        ListBuffer<JCTree.JCAnnotation> annotationsList = new ListBuffer();
+        try {
+            Class.forName("com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration");
+            JCTree.JCExpression attr1 = treeMaker.Assign(treeMaker.Ident(names.fromString("exist")),
+                    treeMaker.Literal(false));
+            JCTree.JCAnnotation jcAnnotation = treeMaker.Annotation(memberAccess("com.baomidou.mybatisplus.annotation.TableField"),
+                    List.of(attr1));
+            annotationsList.append(jcAnnotation);
+        }catch (Throwable e){
+
+        }
+        if(dict.fieldAnnotations()!=null && dict.fieldAnnotations().length>0){
+            FieldAnnotation[] annotations = dict.fieldAnnotations();
+            for (FieldAnnotation annotation : annotations) {
+                String fullAnnotationName = annotation.fullAnnotationName();
+                Var[] vars = annotation.vars();
+                ListBuffer<JCTree.JCExpression> varsList = new ListBuffer();
+                for (Var var : vars) {
+                    Object typeTagValue = getTypeTagValue(var.varType(), var.varValue());
+                    JCTree.JCExpression attr1 = treeMaker.Assign(treeMaker.Ident(names.fromString(var.varName())),
+                            treeMaker.Literal(typeTagValue));
+                    varsList.append(attr1);
+                }
+                JCTree.JCAnnotation jcAnnotation = treeMaker.Annotation(memberAccess(fullAnnotationName), varsList.toList());
+                annotationsList.append(jcAnnotation);
+            }
+        }
+        return treeMaker.VarDef(treeMaker.Modifiers(jcVariableDecl.getModifiers().flags,annotationsList.toList()),getNewDictVarName(jcVariableDecl.getName()),memberAccess("java.lang.String"), null);
+    }
+
+    private Object getTypeTagValue(VarType varType,String varValue){
+        if(varType.name().equalsIgnoreCase(TypeTag.SHORT.toString())) return Integer.parseInt(varValue);
+        if(varType.name().equalsIgnoreCase(TypeTag.LONG.toString())) return Long.parseLong(varValue);
+        if(varType.name().equalsIgnoreCase(TypeTag.FLOAT.toString())) return Float.parseFloat(varValue);
+        if(varType.name().equalsIgnoreCase(TypeTag.INT.toString())) return Integer.parseInt(varValue);
+        if(varType.name().equalsIgnoreCase(TypeTag.DOUBLE.toString())) return Double.parseDouble(varValue);
+        if(varType.name().equalsIgnoreCase(TypeTag.BOOLEAN.toString())) return Boolean.parseBoolean(varValue);
+        return varValue;
     }
 
     private JCTree.JCExpression memberAccess(String components){

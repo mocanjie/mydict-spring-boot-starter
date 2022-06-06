@@ -10,4 +10,7 @@ import java.lang.annotation.Target;
 public @interface MyDict {
     String name();
     String defaultDesc() default "";
+
+    FieldAnnotation[] fieldAnnotations() default {};
+
 }
