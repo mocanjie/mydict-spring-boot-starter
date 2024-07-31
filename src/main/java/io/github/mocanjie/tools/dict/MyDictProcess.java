@@ -115,9 +115,9 @@ public class MyDictProcess extends AbstractProcessor {
 
     private JCTree.JCExpression memberAccess(String components){
         String[] componentArray = components.split("\\.");
-        JCTree.JCExpression expr = treeMaker.Ident(getnameFromString(componentArray[0]));
+        JCTree.JCExpression expr = treeMaker.Ident(getNameFromString(componentArray[0]));
         for (int i=1;i<componentArray.length;i++){
-            expr = treeMaker.Select(expr,getnameFromString(componentArray[i]));
+            expr = treeMaker.Select(expr,getNameFromString(componentArray[i]));
         }
         return expr;
     }
@@ -139,7 +139,13 @@ public class MyDictProcess extends AbstractProcessor {
                                 elementUtils.getName("getDesc")),
                         List.<JCTree.JCExpression>of(
                                 treeMaker.Literal(annotation.name()),
-                                treeMaker.Select(treeMaker.Ident(names.fromString("this")), jcVariableDecl.getName())
+                                treeMaker.Apply(List.<JCTree.JCExpression>nil()
+                                        ,treeMaker.Select(memberAccess("this")
+                                                ,elementUtils.getName(getterMethodName(jcVariableDecl)))
+                                            ,List.<JCTree.JCExpression>nil()
+                                        )
+//                                treeMaker.Select(memberAccess("this"),elementUtils.getName(getterMethodName(jcVariableDecl)))
+//                                treeMaker.Select(treeMaker.Ident(names.fromString("this")), jcVariableDecl.getName())
                         )
                 ));
         statements.append(descStr);
@@ -164,15 +170,22 @@ public class MyDictProcess extends AbstractProcessor {
         return treeMaker.MethodDef(treeMaker.Modifiers(Flags.PUBLIC), getNewMethodName(0,jcVariableDecl.getName()), memberAccess("java.lang.String"), List.nil(), List.nil(), List.nil(), body, null);
     }
 
-    private Name getnameFromString(String s){
+    private Name getNameFromString(String s){
         return names.fromString(s);
     }
 
-
+    private Name getVarName(Name name) {
+        return names.fromString(name.toString());
+    }
 
 
     private Name getNewDictVarName(Name name) {
         return names.fromString(name.toString()+"Desc");
+    }
+
+    private Name getterMethodName(JCTree.JCVariableDecl jcVariableDecl) {
+        String s = jcVariableDecl.getName().toString();
+        return names.fromString("get" + s.substring(0, 1).toUpperCase() + s.substring(1, jcVariableDecl.getName().length()));
     }
 
     private Name setterMethodName(JCTree.JCVariableDecl jcVariableDecl) {
