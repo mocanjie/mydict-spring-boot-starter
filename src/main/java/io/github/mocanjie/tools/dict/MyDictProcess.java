@@ -30,7 +30,7 @@ public class MyDictProcess extends AbstractProcessor {
 
     @Override
     public SourceVersion getSupportedSourceVersion() {
-        return SourceVersion.RELEASE_8;
+        return SourceVersion.latestSupported();
     }
 
     @Override
@@ -73,23 +73,24 @@ public class MyDictProcess extends AbstractProcessor {
 
     private JCTree.JCVariableDecl makeDictDescFieldDecl(JCTree.JCVariableDecl jcVariableDecl,MyDict dict) {
         treeMaker.pos = jcVariableDecl.pos;
-        ListBuffer<JCTree.JCAnnotation> annotationsList = new ListBuffer();
+        ListBuffer<JCTree.JCAnnotation> annotationsList = new ListBuffer<>();
         try {
-            Class.forName("com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration");
+            // 检查MyBatis-Plus是否存在于classpath
+            Class.forName("com.baomidou.mybatisplus.annotation.TableField");
             JCTree.JCExpression attr1 = treeMaker.Assign(treeMaker.Ident(names.fromString("exist")),
                     treeMaker.Literal(false));
             JCTree.JCAnnotation jcAnnotation = treeMaker.Annotation(memberAccess("com.baomidou.mybatisplus.annotation.TableField"),
                     List.of(attr1));
             annotationsList.append(jcAnnotation);
         }catch (Throwable e){
-
+            // MyBatis-Plus不存在，跳过添加@TableField注解
         }
         if(dict.fieldAnnotations()!=null && dict.fieldAnnotations().length>0){
             FieldAnnotation[] annotations = dict.fieldAnnotations();
             for (FieldAnnotation annotation : annotations) {
                 String fullAnnotationName = annotation.fullAnnotationName();
                 Var[] vars = annotation.vars();
-                ListBuffer<JCTree.JCExpression> varsList = new ListBuffer();
+                ListBuffer<JCTree.JCExpression> varsList = new ListBuffer<>();
                 for (Var var : vars) {
                     Object typeTagValue = getTypeTagValue(var.varType(), var.varValue());
                     JCTree.JCExpression attr1 = treeMaker.Assign(treeMaker.Ident(names.fromString(var.varName())),
