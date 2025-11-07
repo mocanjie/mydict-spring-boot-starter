@@ -42,8 +42,8 @@ public class MyDictProcess extends AbstractProcessor {
         for (VariableElement variableElement : set) {
             JCTree.JCVariableDecl jcVariableDecl = (JCTree.JCVariableDecl) trees.getTree(variableElement);
             JCTree.JCClassDecl jcClassDecl = (JCTree.JCClassDecl) trees.getTree(variableElement.getEnclosingElement());
-            if(isVariableExist(jcClassDecl,jcVariableDecl)) continue;
             MyDict annotation = variableElement.getAnnotation(MyDict.class);
+            if(isVariableExist(jcClassDecl,jcVariableDecl,annotation)) continue;
             //生成变量
             JCTree.JCVariableDecl dictVariableDecl = makeDictDescFieldDecl(jcVariableDecl,annotation);
             jcClassDecl.defs = jcClassDecl.defs.append(dictVariableDecl);
@@ -53,14 +53,14 @@ public class MyDictProcess extends AbstractProcessor {
                 jcClassDecl.defs = jcClassDecl.defs.append(dictMethodDecl);
             }catch (Exception e){}
             try{
-                jcClassDecl.defs = jcClassDecl.defs.append(makeSetterMethod(jcVariableDecl));
+                jcClassDecl.defs = jcClassDecl.defs.append(makeSetterMethod(jcVariableDecl, annotation));
             }catch (Exception e){}
         }
         return true;
     }
 
-    private boolean isVariableExist(JCTree.JCClassDecl jcClassDecl, JCTree.JCVariableDecl jcVariableDecl){
-        Name dictVarName = getNewDictVarName(jcVariableDecl.getName());
+    private boolean isVariableExist(JCTree.JCClassDecl jcClassDecl, JCTree.JCVariableDecl jcVariableDecl, MyDict annotation){
+        Name dictVarName = getNewDictVarName(jcVariableDecl.getName(), annotation);
         return jcClassDecl.defs.stream().filter(x -> {
             if (x.getTree() instanceof JCTree.JCVariableDecl) {
                 JCTree.JCVariableDecl tree = (JCTree.JCVariableDecl) x.getTree();
@@ -101,7 +101,7 @@ public class MyDictProcess extends AbstractProcessor {
                 annotationsList.append(jcAnnotation);
             }
         }
-        return treeMaker.VarDef(treeMaker.Modifiers(jcVariableDecl.getModifiers().flags,annotationsList.toList()),getNewDictVarName(jcVariableDecl.getName()),memberAccess("java.lang.String"), null);
+        return treeMaker.VarDef(treeMaker.Modifiers(jcVariableDecl.getModifiers().flags,annotationsList.toList()),getNewDictVarName(jcVariableDecl.getName(), dict),memberAccess("java.lang.String"), null);
     }
 
     private Object getTypeTagValue(VarType varType,String varValue){
@@ -131,8 +131,8 @@ public class MyDictProcess extends AbstractProcessor {
      * - sexTypeDesc -> getSexTypeDesc / setSexTypeDesc
      * - sex_type_desc -> getSex_type_desc / setSex_type_desc
      */
-    private Name getNewMethodName(int methodType,Name name) {
-        name = getNewDictVarName(name);
+    private Name getNewMethodName(int methodType, Name name, MyDict annotation) {
+        name = getNewDictVarName(name, annotation);
         String s = name.toString();
         String pref = methodType==0?"get":"set";
 
@@ -183,7 +183,7 @@ public class MyDictProcess extends AbstractProcessor {
         );
         statements.append(anIf);
         JCTree.JCBlock body = treeMaker.Block(0, statements.toList());
-        return treeMaker.MethodDef(treeMaker.Modifiers(Flags.PUBLIC), getNewMethodName(0,jcVariableDecl.getName()), memberAccess("java.lang.String"), List.nil(), List.nil(), List.nil(), body, null);
+        return treeMaker.MethodDef(treeMaker.Modifiers(Flags.PUBLIC), getNewMethodName(0,jcVariableDecl.getName(), annotation), memberAccess("java.lang.String"), List.nil(), List.nil(), List.nil(), body, null);
     }
 
     private Name getNameFromString(String s){
@@ -199,17 +199,22 @@ public class MyDictProcess extends AbstractProcessor {
      * 根据原字段名的命名风格，生成对应的描述字段名
      * 支持驼峰命名和蛇形命名的自动识别
      *
+     * 命名规则（优先级从高到低）：
+     * 1. 如果字段名包含下划线，忽略注解开关，始终生成蛇形命名
+     * 2. 如果字段名包含大小写混合，忽略注解开关，始终生成驼峰命名
+     * 3. 如果字段名全小写无特征，则根据注解的 camelCase 开关决定
+     *
      * 示例：
-     * - sexType -> sexTypeDesc (驼峰命名)
-     * - sex_type -> sex_type_desc (蛇形命名)
-     * - SEX_TYPE -> SEX_TYPE_DESC (大写蛇形)
+     * - user_status -> user_status_desc (自动识别蛇形)
+     * - userName -> userNameDesc (自动识别驼峰)
+     * - type + camelCase=true -> typeDesc (开关控制)
+     * - type + camelCase=false -> type_desc (开关控制)
      */
-    private Name getNewDictVarName(Name name) {
+    private Name getNewDictVarName(Name name, MyDict annotation) {
         String originalName = name.toString();
 
-        // 判断是否包含下划线（蛇形命名）
+        // 优先级1：如果包含下划线，始终使用蛇形命名
         if (originalName.contains("_")) {
-            // 蛇形命名：在末尾添加 _desc 或 _DESC
             // 判断原名是否全大写
             if (originalName.equals(originalName.toUpperCase())) {
                 // 全大写蛇形：SEX_TYPE -> SEX_TYPE_DESC
@@ -218,10 +223,35 @@ public class MyDictProcess extends AbstractProcessor {
                 // 小写或混合蛇形：sex_type -> sex_type_desc
                 return names.fromString(originalName + "_desc");
             }
-        } else {
-            // 驼峰命名：sexType -> sexTypeDesc
+        }
+
+        // 优先级2：如果包含大小写混合（驼峰），使用驼峰命名
+        if (hasMixedCase(originalName)) {
             return names.fromString(originalName + "Desc");
         }
+
+        // 优先级3：全小写无特征，根据注解开关决定
+        if (annotation.camelCase()) {
+            // 使用驼峰：type -> typeDesc
+            return names.fromString(originalName + "Desc");
+        } else {
+            // 使用蛇形：type -> type_desc
+            return names.fromString(originalName + "_desc");
+        }
+    }
+
+    /**
+     * 判断字符串是否包含大小写混合（驼峰命名特征）
+     */
+    private boolean hasMixedCase(String str) {
+        boolean hasLower = false;
+        boolean hasUpper = false;
+        for (char c : str.toCharArray()) {
+            if (Character.isLowerCase(c)) hasLower = true;
+            if (Character.isUpperCase(c)) hasUpper = true;
+            if (hasLower && hasUpper) return true;
+        }
+        return false;
     }
 
     private Name getterMethodName(JCTree.JCVariableDecl jcVariableDecl) {
@@ -234,23 +264,23 @@ public class MyDictProcess extends AbstractProcessor {
         return names.fromString("set" + s.substring(0, 1).toUpperCase() + s.substring(1, jcVariableDecl.getName().length()));
     }
 
-    private JCTree.JCMethodDecl makeSetterMethod(JCTree.JCVariableDecl jcVariableDecl){
+    private JCTree.JCMethodDecl makeSetterMethod(JCTree.JCVariableDecl jcVariableDecl, MyDict annotation){
         JCTree.JCModifiers jcModifiers = treeMaker.Modifiers(Flags.PUBLIC);
         JCTree.JCExpression retrunType = treeMaker.TypeIdent(TypeTag.VOID);
         List<JCTree.JCVariableDecl> parameters = List.nil();
         JCTree.JCVariableDecl param = treeMaker.VarDef(
-                treeMaker.Modifiers(Flags.PARAMETER), getNewDictVarName(jcVariableDecl.name), memberAccess("java.lang.String"), null);
+                treeMaker.Modifiers(Flags.PARAMETER), getNewDictVarName(jcVariableDecl.name, annotation), memberAccess("java.lang.String"), null);
         param.pos = jcVariableDecl.pos;
         parameters = parameters.append(param);
         JCTree.JCStatement jcStatement = treeMaker.Exec(treeMaker.Assign(
-                treeMaker.Select(treeMaker.Ident(names.fromString("this")), getNewDictVarName(jcVariableDecl.name)),
-                treeMaker.Ident(getNewDictVarName(jcVariableDecl.name))));
+                treeMaker.Select(treeMaker.Ident(names.fromString("this")), getNewDictVarName(jcVariableDecl.name, annotation)),
+                treeMaker.Ident(getNewDictVarName(jcVariableDecl.name, annotation))));
         List<JCTree.JCStatement> jcStatementList = List.nil();
         jcStatementList = jcStatementList.append(jcStatement);
         JCTree.JCBlock jcBlock = treeMaker.Block(0, jcStatementList);
         List<JCTree.JCTypeParameter> methodGenericParams = List.nil();
         List<JCTree.JCExpression> throwsClauses = List.nil();
-        JCTree.JCMethodDecl jcMethodDecl = treeMaker.MethodDef(jcModifiers, getNewMethodName(1,jcVariableDecl.getName()), retrunType, methodGenericParams, parameters, throwsClauses, jcBlock,  null);
+        JCTree.JCMethodDecl jcMethodDecl = treeMaker.MethodDef(jcModifiers, getNewMethodName(1,jcVariableDecl.getName(), annotation), retrunType, methodGenericParams, parameters, throwsClauses, jcBlock,  null);
         return jcMethodDecl;
     }
 
