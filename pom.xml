@@ -7,7 +7,7 @@
     <groupId>io.github.mocanjie</groupId>
     <artifactId>mydict-spring-boot-starter</artifactId>
     <packaging>jar</packaging>
-    <version>spring3</version>
+    <version>spring3-21</version>
     <name>${project.artifactId}-${project.version}</name>
     <description>${project.artifactId}-${project.version}</description>
 
@@ -37,35 +37,48 @@
         </license>
     </licenses>
     <properties>
-        <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <java.version>17</java.version>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
-        <maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
-        <maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
-        <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
+        <!-- Java 版本配置 -->
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Spring 版本 -->
+        <spring.version>6.1.14</spring.version>
+        <spring-boot.version>3.4.0</spring-boot.version>
+
+        <!-- Maven 插件版本 -->
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-        <spring-boot.version>3.2.0</spring-boot.version>
+        <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+        <maven-javadoc-plugin.version>3.10.1</maven-javadoc-plugin.version>
+        <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
+        <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
     </properties>
 
 
     <dependencies>
-        <!-- Spring Boot 3.x Starter -->
+        <!-- Spring Context (轻量级依赖，用于依赖注入) -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-            <version>${spring-boot.version}</version>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.version}</version>
+            <optional>true</optional>
         </dependency>
 
-        <!-- Optional MyBatis Plus Support -->
+        <!-- Spring Boot AutoConfiguration (用于 @Configuration 支持) -->
         <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-annotation</artifactId>
-            <version>3.5.4</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <version>${spring-boot.version}</version>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Caffeine 缓存 (用于字典查询缓存) -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>3.2.3</version>
         </dependency>
     </dependencies>
 
@@ -83,11 +96,12 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
+                    <!-- 使用 source/target 而非 release，因为需要访问 jdk.compiler 模块 -->
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <!-- 编译注解处理器自身时禁用注解处理，避免自举问题 -->
                     <proc>none</proc>
-                    <!-- JDK17+ 模块系统兼容性 - 允许访问javac内部API -->
+                    <!-- JDK17+ 模块系统兼容性：允许访问 javac 内部 API -->
                     <compilerArgs>
                         <arg>--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
                         <arg>--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>

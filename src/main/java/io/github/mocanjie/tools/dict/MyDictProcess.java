@@ -123,10 +123,25 @@ public class MyDictProcess extends AbstractProcessor {
         return expr;
     }
 
+    /**
+     * 生成 getter/setter 方法名
+     * 自动处理驼峰命名和蛇形命名
+     *
+     * 示例：
+     * - sexTypeDesc -> getSexTypeDesc / setSexTypeDesc
+     * - sex_type_desc -> getSex_type_desc / setSex_type_desc
+     */
     private Name getNewMethodName(int methodType,Name name) {
         name = getNewDictVarName(name);
         String s = name.toString();
         String pref = methodType==0?"get":"set";
+
+        // 如果是蛇形命名，保持原样（只在前面加 get/set）
+        if (s.contains("_")) {
+            return names.fromString(pref + s.substring(0, 1).toUpperCase() + s.substring(1));
+        }
+
+        // 驼峰命名：首字母大写
         return names.fromString(pref + s.substring(0, 1).toUpperCase() + s.substring(1, name.length()));
     }
 
@@ -180,8 +195,33 @@ public class MyDictProcess extends AbstractProcessor {
     }
 
 
+    /**
+     * 根据原字段名的命名风格，生成对应的描述字段名
+     * 支持驼峰命名和蛇形命名的自动识别
+     *
+     * 示例：
+     * - sexType -> sexTypeDesc (驼峰命名)
+     * - sex_type -> sex_type_desc (蛇形命名)
+     * - SEX_TYPE -> SEX_TYPE_DESC (大写蛇形)
+     */
     private Name getNewDictVarName(Name name) {
-        return names.fromString(name.toString()+"Desc");
+        String originalName = name.toString();
+
+        // 判断是否包含下划线（蛇形命名）
+        if (originalName.contains("_")) {
+            // 蛇形命名：在末尾添加 _desc 或 _DESC
+            // 判断原名是否全大写
+            if (originalName.equals(originalName.toUpperCase())) {
+                // 全大写蛇形：SEX_TYPE -> SEX_TYPE_DESC
+                return names.fromString(originalName + "_DESC");
+            } else {
+                // 小写或混合蛇形：sex_type -> sex_type_desc
+                return names.fromString(originalName + "_desc");
+            }
+        } else {
+            // 驼峰命名：sexType -> sexTypeDesc
+            return names.fromString(originalName + "Desc");
+        }
     }
 
     private Name getterMethodName(JCTree.JCVariableDecl jcVariableDecl) {
