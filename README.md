@@ -12,6 +12,8 @@
 - 🌟 **JDK17+** - 拥抱现代Java生态
 - 🔗 **MyBatis-Plus集成** - 自动添加`@TableField(exist = false)`
 - 🎨 **自定义注解** - 支持在生成字段上添加任意注解
+- 💾 **Caffeine缓存** - 自动缓存字典查询结果，可配置TTL和容量
+- 🔤 **智能命名** - 自动识别蛇形/驼峰命名，支持camelCase开关
 
 ## 📋 版本兼容性
 
@@ -174,6 +176,77 @@ mvn clean compile
 - `private String typeDesc;` 字段
 - 对应的getter/setter方法
 
+## 💾 缓存配置
+
+MyDict 内置 Caffeine 缓存以提升字典查询性能。默认启用，可通过配置调整：
+
+### application.yml 配置
+
+```yaml
+mydict:
+  cache:
+    enabled: true        # 是否启用缓存（默认：true）
+    ttl: 300            # 缓存过期时间，单位秒（默认：300，即5分钟）
+    max-size: 10000     # 最大缓存条目数（默认：10000）
+    record-stats: false # 是否记录缓存统计（默认：false）
+```
+
+### 缓存管理
+
+```java
+// 清空所有缓存（例如字典数据更新后）
+MyDictHelper.clearCache();
+
+// 清除指定字典的缓存
+MyDictHelper.clearCache("user_status");
+
+// 获取缓存统计信息（需要 recordStats=true）
+CacheStats stats = MyDictHelper.getCacheStats();
+System.out.println("缓存命中率: " + stats.hitRate());
+```
+
+### 何时使用缓存
+
+✅ **推荐启用**：
+- 字典数据相对稳定
+- 字典查询频繁（如列表页面）
+- 字典数据源性能有限（如远程数据库）
+
+⚠️ **建议禁用**：
+- 字典数据频繁变更
+- 实时性要求极高
+- 内存资源紧张
+
+## 🔤 字段命名策略
+
+MyDict 支持智能命名识别和 `camelCase` 开关控制生成字段的命名风格。
+
+### camelCase 参数
+
+```java
+@MyDict(name = "status", camelCase = true)   // 生成：statusDesc
+private String status;
+
+@MyDict(name = "type", camelCase = false)    // 生成：type_desc
+private String type;
+```
+
+### 智能命名规则（优先级从高到低）
+
+| 原字段名 | camelCase | 生成字段名 | 说明 |
+|---------|-----------|-----------|------|
+| `user_status` | true/false | `user_status_desc` | ①包含下划线，忽略开关，生成蛇形 |
+| `userName` | true/false | `userNameDesc` | ②大小写混合，忽略开关，生成驼峰 |
+| `type` | **true** | `typeDesc` | ③全小写，遵循开关，生成驼峰 |
+| `type` | **false** | `type_desc` | ③全小写，遵循开关，生成蛇形 |
+| `SEX_TYPE` | true/false | `SEX_TYPE_DESC` | ①全大写蛇形 |
+
+### 推荐实践
+
+- **统一团队规范**：根据项目命名规范设置 `camelCase`
+- **保持一致性**：同一实体类建议使用相同的 `camelCase` 设置
+- **依赖智能识别**：如果字段名已有明确风格（含下划线或驼峰），无需手动设置
+
 ## 🔧 高级用法
 
 ### 自定义注解支持
@@ -212,6 +285,8 @@ private String goodsTypeDesc;
 | Spring Boot | 2.x | 3.x |
 | 依赖管理 | 需要tools.jar | 现代化依赖 |
 | 模块系统 | 不支持 | 完全支持 |
+| 缓存支持 | ❌ 无 | ✅ Caffeine缓存 |
+| 智能命名 | ❌ 无 | ✅ 自动识别+开关 |
 
 ## ❗ 重要说明
 
@@ -368,6 +443,9 @@ private String goodsTypeDesc;
 - ✅ 现代化模块系统支持
 - ✅ 优化MyBatis-Plus集成
 - ✅ 改进错误处理和兼容性
+- ✅ 集成Caffeine 3.2.3缓存
+- ✅ 支持camelCase命名开关
+- ✅ 智能命名识别（蛇形/驼峰）
 
 ### 1.2 版本 (历史版本)
 - 支持JDK8和Spring Boot 2.x
