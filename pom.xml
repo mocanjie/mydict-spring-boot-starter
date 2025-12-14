@@ -7,7 +7,7 @@
     <groupId>io.github.mocanjie</groupId>
     <artifactId>mydict-spring-boot-starter</artifactId>
     <packaging>jar</packaging>
-    <version>spring3-21</version>
+    <version>spring3-17</version>
     <name>${project.artifactId}-${project.version}</name>
     <description>${project.artifactId}-${project.version}</description>
 
@@ -38,7 +38,7 @@
     </licenses>
     <properties>
         <!-- Java 版本配置 -->
-        <java.version>21</java.version>
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -96,13 +96,14 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <!-- 使用 source/target 而非 release，因为需要访问 jdk.compiler 模块 -->
+                    <!-- Must use source/target instead of release for javac API access -->
                     <source>${java.version}</source>
                     <target>${java.version}</target>
-                    <!-- 编译注解处理器自身时禁用注解处理，避免自举问题 -->
+                    <!-- Disable annotation processing when compiling the processor itself -->
                     <proc>none</proc>
-                    <!-- JDK17+ 模块系统兼容性：允许访问 javac 内部 API -->
+                    <!-- JDK 17+ module system compatibility: allow access to javac internal APIs -->
                     <compilerArgs>
+                        <!-- Export javac internal APIs for JDK 17-24+ -->
                         <arg>--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
                         <arg>--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                         <arg>--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>

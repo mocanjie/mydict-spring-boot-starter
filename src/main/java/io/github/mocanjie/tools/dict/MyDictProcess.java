@@ -287,9 +287,45 @@ public class MyDictProcess extends AbstractProcessor {
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        this.trees = JavacTrees.instance(processingEnv);
-        Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
+        // 解包 IDEA 的 Proxy，兼容增量编译
+        ProcessingEnvironment unwrapped = unwrapProcessingEnvironment(processingEnv);
+        this.trees = JavacTrees.instance(unwrapped);
+        Context context = ((JavacProcessingEnvironment) unwrapped).getContext();
         this.treeMaker = TreeMaker.instance(context);
         this.names = Names.instance(context);
+    }
+
+    /**
+     * 解包 IntelliJ IDEA 的 ProcessingEnvironment Proxy
+     *
+     * IDEA 的增量编译环境会将 ProcessingEnvironment 包装成 Proxy，
+     * 需要解包才能访问 javac 的内部 API（如 Tree API）。
+     *
+     * 参考：
+     * - https://github.com/mapstruct/mapstruct/issues/2215
+     * - https://github.com/javalin/javalin-openapi/issues/141
+     *
+     * @param processingEnv 原始或被包装的 ProcessingEnvironment
+     * @return 解包后的 ProcessingEnvironment
+     */
+    private ProcessingEnvironment unwrapProcessingEnvironment(ProcessingEnvironment processingEnv) {
+        try {
+            // 尝试使用 JetBrains 的 APIWrappers 解包
+            Class<?> apiWrappers = processingEnv.getClass().getClassLoader()
+                    .loadClass("org.jetbrains.jps.javac.APIWrappers");
+            java.lang.reflect.Method unwrapMethod = apiWrappers.getDeclaredMethod("unwrap", Class.class, Object.class);
+            ProcessingEnvironment unwrapped = (ProcessingEnvironment) unwrapMethod.invoke(
+                    null, ProcessingEnvironment.class, processingEnv);
+
+            if (unwrapped != null) {
+                // 成功解包，返回真实的 ProcessingEnvironment
+                return unwrapped;
+            }
+        } catch (Throwable ignored) {
+            // 不在 IDEA 环境中，或者解包失败，使用原始对象
+        }
+
+        // 返回原始对象（标准 javac 环境）
+        return processingEnv;
     }
 }

@@ -19,8 +19,12 @@
 
 | 版本 | JDK要求 | Spring Boot | 配置要求 |
 |------|---------|-------------|----------|
-| spring3 | JDK17+ | 3.0+ | **零配置** |
+| spring3-17 | **JDK17-24+** | 3.0+ | Maven 编译器配置(一次性) |
 | 1.2 | JDK8+ | 2.x | 需要IDEA配置 |
+
+> **⚠️ JDK 24 用户注意**:
+> - 如果遇到注解处理器不生成字段的问题,请确保使用 **JDK 24 编译的最新版本**
+> - 本项目已支持 JDK 17-24+,但需要用最高 JDK 版本编译以确保向下兼容
 
 ## 🎪 代码示例
 
@@ -90,6 +94,8 @@ public class TestVO {
 
 由于JDK 17+的模块化限制，注解处理器需要访问javac内部API。**必须**在项目的`pom.xml`中添加以下配置：
 
+#### JDK 17-23 配置
+
 ```xml
 <build>
     <plugins>
@@ -112,6 +118,47 @@ public class TestVO {
     </plugins>
 </build>
 ```
+
+#### ⚠️ JDK 24+ 额外配置
+
+**JDK 24 引入了更严格的模块访问控制**，除了上述 `--add-exports` 参数外，还需要添加 `--add-opens` 参数以支持深度反射：
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <fork>true</fork>
+                <compilerArgs>
+                    <!-- JDK 17-23: Export javac internal APIs -->
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+
+                    <!-- JDK 24+: Additional opens required for deep reflection -->
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                </compilerArgs>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+```
+
+> **💡 JDK 版本差异说明：**
+>
+> - **JDK 17-23**: 只需 `--add-exports` 即可正常使用
+> - **JDK 24+**: 额外需要 `--add-opens` 以支持注解处理器的深度反射访问
+> - **建议**: 如果你的项目可能在不同JDK版本间切换，建议直接使用JDK 24+的完整配置（向下兼容）
 
 > **💡 为什么需要这个配置？**
 >
@@ -292,15 +339,40 @@ private String goodsTypeDesc;
 
 ### 配置要求
 
-**✅ 无需IDEA配置：**
-- ❌ **不再需要**: 设置`-Djps.track.ap.dependencies=false`
-- ❌ **不再需要**: 在IDEA中手动配置注解处理器
-- ❌ **不再需要**: 复杂的IDE VM参数设置
-
-**⚠️ 需要Maven配置：**
+**⚠️ 必需的 Maven 配置：**
 - ✅ **一次性配置**: 在`pom.xml`中添加编译器参数（见上方步骤2）
 - ✅ **原因说明**: JDK 17+模块化系统的安全限制
 - ✅ **配置简单**: 直接复制粘贴即可
+- ✅ **适用范围**: 命令行编译（`mvn compile`）
+
+**✅ IDEA 增量编译支持（新功能）：**
+
+从最新版本开始，MyDict 已原生支持 IntelliJ IDEA 的增量编译环境：
+
+- ✅ **自动检测 IDEA 环境**：无需手动配置 VM 参数
+- ✅ **Proxy 自动解包**：内部处理 IDEA 的 ProcessingEnvironment Proxy
+- ✅ **零额外配置**：与命令行编译体验完全一致
+
+> **🎉 技术说明**：
+>
+> IDEA 的增量编译会将 `ProcessingEnvironment` 包装成 Proxy，导致无法直接访问 javac 内部 API。
+> 我们使用 JetBrains 官方的 `org.jetbrains.jps.javac.APIWrappers.unwrap()` 方法自动解包，
+> 实现了与 IDEA 增量编译的完美兼容。
+>
+> 参考：[MapStruct #2215](https://github.com/mapstruct/mapstruct/issues/2215), [javalin-openapi #141](https://github.com/javalin/javalin-openapi/issues/141)
+
+**⚠️ 如果仍遇到问题（极少数情况）：**
+
+在旧版本 IDEA 或特殊环境下，如果遇到编译问题，可以尝试以下方案之一：
+
+**方案 1**：配置 IDEA VM 参数
+1. `Settings` → `Build, Execution, Deployment` → `Compiler` → `Shared build process VM options`
+2. 添加：`-Djps.track.ap.dependencies=false`
+3. 重启 IDEA
+
+**方案 2**：委托给 Maven（推荐）
+1. `Settings` → `Build Tools` → `Maven` → `Runner`
+2. 勾选：`Delegate IDE build/run actions to Maven`
 
 ### 为什么不是真正的"零配置"？
 
@@ -328,16 +400,54 @@ private String goodsTypeDesc;
 
 ---
 
-#### 2. 生成的字段看不到（IDE中显示红色波浪线）
+#### 1.5 JDK 24 编译成功但字段没有生成
+
+**现象**：
+- 使用 JDK 24 编译,没有错误
+- 但是 `xxxDesc` 字段和 getter/setter 方法没有生成
 
 **原因**：
-- 字段是在编译期生成的，IDE在编辑时看不到
-- 这是正常现象，和Lombok一样
+- MyDict 注解处理器 JAR 是用较低版本 JDK 编译的
+- JDK 24 的模块系统更严格,导致运行时兼容性问题
+
+**解决方案**：
+
+1. **方案 1**: 切换到 JDK 17-23 使用(临时方案)
+   ```bash
+   export JAVA_HOME=/path/to/jdk17
+   mvn clean compile
+   ```
+
+2. **方案 2**: 使用 JDK 24 编译的最新版本(推荐)
+   - 确保使用最新发布的 mydict 版本
+   - 或者自行用 JDK 24 编译本项目:
+     ```bash
+     git clone https://github.com/mocanjie/mydict-spring-boot-starter
+     cd mydict-spring-boot-starter
+     # 确保使用 JDK 24
+     mvn clean install -DskipTests
+     ```
+
+3. **验证是否生成**：
+   ```bash
+   javap -p target/classes/your/package/YourClass.class
+   # 应该能看到 xxxDesc 字段和对应的 getter/setter
+   ```
+
+---
+
+#### 2. 生成的字段在 IDE 中看不到（显示红色波浪线）
+
+**这是正常现象！** 与 Lombok 一样，字段是在编译期生成的，IDE 在编辑时看不到。
 
 **解决**：
-- 编译后字段会存在于`.class`文件中
-- 运行时完全正常
-- 如果需要IDE支持，未来会提供IDEA插件
+- ✅ 编译后字段会存在于 `.class` 文件中
+- ✅ 运行时完全正常，可以正常访问 `obj.getXxxDesc()`
+- ✅ 如果需要 IDE 支持，未来会提供 IDEA 插件
+
+**临时方案**（如果红线让你不舒服）：
+- 在 IDE 中使用 Maven 编译（`mvn compile`）
+- 或委托给 Maven：`Settings` → `Build Tools` → `Maven` → `Runner` → 勾选 `Delegate IDE build/run actions to Maven`
 
 ---
 
@@ -413,19 +523,28 @@ private String goodsTypeDesc;
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
-            <!-- ⚠️ 必需配置 -->
+            <!-- ⚠️ 必需配置：支持 JDK 17-24+ -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <fork>true</fork>
                     <compilerArgs>
+                        <!-- JDK 17-23: Export javac internal APIs -->
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+
+                        <!-- JDK 24+: Additional opens required -->
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>
@@ -434,18 +553,52 @@ private String goodsTypeDesc;
 </project>
 ```
 
+## 🔨 从源码编译
+
+### 编译要求
+
+- **推荐**: 使用 **JDK 24** 编译,以获得最佳跨版本兼容性
+- **最低**: JDK 17+
+
+### 编译步骤
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/mocanjie/mydict-spring-boot-starter.git
+cd mydict-spring-boot-starter
+
+# 2. 确保使用 JDK 24 (推荐) 或 JDK 17+
+java -version
+
+# 3. 编译并安装到本地 Maven 仓库
+mvn clean install -DskipTests
+
+# 4. 在你的项目中使用
+# 确保 pom.xml 中的版本号与编译的版本一致
+```
+
+### 为什么推荐用 JDK 24 编译?
+
+1. **向下兼容**: JDK 24 编译的 JAR 可以在 JDK 17+ 上运行
+2. **模块系统**: JDK 24 的模块系统最严格,确保兼容性
+3. **未来保障**: 为未来的 JDK 版本做好准备
+
+> **⚠️ 注意**: 如果用 JDK 17 编译,在 JDK 24 环境可能遇到注解处理器不工作的问题。
+
 ## 📝 更新日志
 
-### spring3 版本 (2024)
-- ✅ 支持JDK17+和Spring Boot 3.x
-- ✅ 实现零配置使用
-- ✅ 移除对tools.jar的依赖
+### spring3-17 版本 (2024-2025)
+- ✅ 支持 JDK 17-24+ 和 Spring Boot 3.x
+- ✅ 完整兼容 JDK 24 的严格模块系统
+- ✅ 移除对 tools.jar 的依赖
 - ✅ 现代化模块系统支持
-- ✅ 优化MyBatis-Plus集成
+- ✅ 优化 MyBatis-Plus 集成
 - ✅ 改进错误处理和兼容性
-- ✅ 集成Caffeine 3.2.3缓存
-- ✅ 支持camelCase命名开关
+- ✅ 集成 Caffeine 3.2.3 缓存
+- ✅ 支持 camelCase 命名开关
 - ✅ 智能命名识别（蛇形/驼峰）
+- ✅ **原生支持 IDEA 增量编译**（自动解包 Proxy）
+- ✅ **JDK 24 全面兼容**（需用 JDK 24 编译）
 
 ### 1.2 版本 (历史版本)
 - 支持JDK8和Spring Boot 2.x
