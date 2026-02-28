@@ -166,18 +166,33 @@ public class MyDictProcess extends AbstractProcessor {
                 ));
         statements.append(descStr);
 
-        JCTree.JCMethodInvocation apply = treeMaker.Apply(
+        // Check if descStr is not null and not empty: descStr != null && !descStr.isEmpty()
+        JCTree.JCBinary notNull = treeMaker.Binary(
+                JCTree.Tag.NE,
+                treeMaker.Ident(names.fromString("descStr")),
+                treeMaker.Literal(TypeTag.BOT, null)
+        );
+
+        JCTree.JCMethodInvocation isEmptyCall = treeMaker.Apply(
                 com.sun.tools.javac.util.List.nil(),
-                treeMaker.Select(memberAccess("org.springframework.util.StringUtils"),
-                        elementUtils.getName("hasText")),
-                com.sun.tools.javac.util.List.of(treeMaker.Ident(names.fromString("descStr")))
+                treeMaker.Select(treeMaker.Ident(names.fromString("descStr")),
+                        elementUtils.getName("isEmpty")),
+                com.sun.tools.javac.util.List.nil()
+        );
+
+        JCTree.JCUnary notEmpty = treeMaker.Unary(JCTree.Tag.NOT, isEmptyCall);
+
+        JCTree.JCBinary condition = treeMaker.Binary(
+                JCTree.Tag.AND,
+                notNull,
+                notEmpty
         );
 
         JCTree.JCStatement ifTrue = treeMaker.Return(treeMaker.Ident(names.fromString("descStr")));
         JCTree.JCStatement ifFlase = treeMaker.Return(treeMaker.Literal(annotation.defaultDesc()));
 
         JCTree.JCIf anIf = treeMaker.If(
-                apply,
+                condition,
                 ifTrue,
                 ifFlase
         );

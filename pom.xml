@@ -7,7 +7,7 @@
     <groupId>io.github.mocanjie</groupId>
     <artifactId>mydict-spring-boot-starter</artifactId>
     <packaging>jar</packaging>
-    <version>spring3-17</version>
+    <version>1.0-jdk21</version>
     <name>${project.artifactId}-${project.version}</name>
     <description>${project.artifactId}-${project.version}</description>
 
@@ -38,7 +38,7 @@
     </licenses>
     <properties>
         <!-- Java 版本配置 -->
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -54,6 +54,9 @@
         <maven-javadoc-plugin.version>3.10.1</maven-javadoc-plugin.version>
         <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
         <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
+
+        <!-- 缓存版本 -->
+        <caffeine.version>3.2.3</caffeine.version>
     </properties>
 
 
@@ -78,7 +81,7 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
-            <version>3.2.3</version>
+            <version>${caffeine.version}</version>
         </dependency>
     </dependencies>
 
@@ -101,7 +104,7 @@
                     <target>${java.version}</target>
                     <!-- Disable annotation processing when compiling the processor itself -->
                     <proc>none</proc>
-                    <!-- JDK 17+ module system compatibility: allow access to javac internal APIs -->
+                    <!-- JDK 21+ module system compatibility: allow access to javac internal APIs -->
                     <compilerArgs>
                         <!-- Export javac internal APIs for JDK 17-24+ -->
                         <arg>--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>

@@ -1,6 +1,6 @@
 # MyDict Spring Boot Starter
 
-🚀 **全新升级版本** - 支持JDK17+ 和 Spring Boot 3.x，真正的零配置使用！
+🚀 **全新升级版本** - 支持JDK21+ 和 Spring Boot 3.x，真正的零配置使用！
 
 自定义数据字典，编译期间自动生成字典字段，就像Lombok一样简单易用。
 
@@ -9,7 +9,7 @@
 - 🎯 **零配置** - 无需任何IDEA设置或复杂配置
 - ⚡ **编译时处理** - 编译期自动生成字典描述字段
 - 🔧 **Spring Boot 3** - 全面支持最新版本
-- 🌟 **JDK17+** - 拥抱现代Java生态
+- 🌟 **JDK21+** - 拥抱现代Java生态
 - 🔗 **MyBatis-Plus集成** - 自动添加`@TableField(exist = false)`
 - 🎨 **自定义注解** - 支持在生成字段上添加任意注解
 - 💾 **Caffeine缓存** - 自动缓存字典查询结果，可配置TTL和容量
@@ -19,12 +19,12 @@
 
 | 版本 | JDK要求 | Spring Boot | 配置要求 |
 |------|---------|-------------|----------|
-| spring3-17 | **JDK17-24+** | 3.0+ | Maven 编译器配置(一次性) |
+| 1.0-jdk21 | **JDK21-24+** | 3.0+ | Maven 编译器配置(一次性) |
 | 1.2 | JDK8+ | 2.x | 需要IDEA配置 |
 
 > **⚠️ JDK 24 用户注意**:
 > - 如果遇到注解处理器不生成字段的问题,请确保使用 **JDK 24 编译的最新版本**
-> - 本项目已支持 JDK 17-24+,但需要用最高 JDK 版本编译以确保向下兼容
+> - 本项目已支持 JDK 21-24+,但需要用最高 JDK 版本编译以确保向下兼容
 
 ## 🎪 代码示例
 
@@ -85,16 +85,16 @@ public class TestVO {
     <dependency>
         <groupId>io.github.mocanjie</groupId>
         <artifactId>mydict-spring-boot-starter</artifactId>
-        <version>spring3</version>
+        <version>1.0-jdk21</version>
     </dependency>
 </dependencies>
 ```
 
 ### 2. ⚠️ 配置Maven编译器（必需！）
 
-由于JDK 17+的模块化限制，注解处理器需要访问javac内部API。**必须**在项目的`pom.xml`中添加以下配置：
+由于JDK 21+的模块化限制，注解处理器需要访问javac内部API。**必须**在项目的`pom.xml`中添加以下配置：
 
-#### JDK 17-23 配置
+#### JDK 21-23 配置
 
 ```xml
 <build>
@@ -132,7 +132,7 @@ public class TestVO {
             <configuration>
                 <fork>true</fork>
                 <compilerArgs>
-                    <!-- JDK 17-23: Export javac internal APIs -->
+                    <!-- JDK 21-23: Export javac internal APIs -->
                     <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
                     <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                     <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
@@ -156,13 +156,13 @@ public class TestVO {
 
 > **💡 JDK 版本差异说明：**
 >
-> - **JDK 17-23**: 只需 `--add-exports` 即可正常使用
+> - **JDK 21-23**: 只需 `--add-exports` 即可正常使用
 > - **JDK 24+**: 额外需要 `--add-opens` 以支持注解处理器的深度反射访问
 > - **建议**: 如果你的项目可能在不同JDK版本间切换，建议直接使用JDK 24+的完整配置（向下兼容）
 
 > **💡 为什么需要这个配置？**
 >
-> 本项目使用javac的Tree API直接修改抽象语法树（AST），以在编译期生成代码。这与Lombok的工作原理类似，但JDK 17+引入了强模块化系统，默认不允许访问编译器的内部API。
+> 本项目使用javac的Tree API直接修改抽象语法树（AST），以在编译期生成代码。这与Lombok的工作原理类似，但JDK 21+引入了强模块化系统，这些API默认不对外开放。
 >
 > 通过`-J--add-exports`参数，我们告诉JVM允许注解处理器访问这些必要的内部包。这是一次性配置，之后就可以正常使用。
 
@@ -233,7 +233,7 @@ MyDict 内置 Caffeine 缓存以提升字典查询性能。默认启用，可通
 mydict:
   cache:
     enabled: true        # 是否启用缓存（默认：true）
-    ttl: 300            # 缓存过期时间，单位秒（默认：300，即5分钟）
+    ttl: 30             # 缓存过期时间，单位秒（默认：30秒，适用于同一请求内多层嵌套POJO场景）
     max-size: 10000     # 最大缓存条目数（默认：10000）
     record-stats: false # 是否记录缓存统计（默认：false）
 ```
@@ -324,11 +324,11 @@ private String goodsTypeDesc;
 
 ## 🆚 与旧版本对比
 
-| 特性 | 旧版本(1.2) | 新版本(spring3) |
+| 特性 | 旧版本(1.2) | 新版本(1.0-jdk21) |
 |------|------------|-----------------|
 | IDEA配置 | ❌ 需要手动配置VM参数 | ✅ 无需IDEA配置 |
 | Maven配置 | 复杂 | 简单（一次性配置） |
-| JDK版本 | JDK8+ | JDK17+ |
+| JDK版本 | JDK8+ | JDK21+ |
 | Spring Boot | 2.x | 3.x |
 | 依赖管理 | 需要tools.jar | 现代化依赖 |
 | 模块系统 | 不支持 | 完全支持 |
@@ -341,7 +341,7 @@ private String goodsTypeDesc;
 
 **⚠️ 必需的 Maven 配置：**
 - ✅ **一次性配置**: 在`pom.xml`中添加编译器参数（见上方步骤2）
-- ✅ **原因说明**: JDK 17+模块化系统的安全限制
+- ✅ **原因说明**: JDK 21+模块化系统的安全限制
 - ✅ **配置简单**: 直接复制粘贴即可
 - ✅ **适用范围**: 命令行编译（`mvn compile`）
 
@@ -376,7 +376,7 @@ private String goodsTypeDesc;
 
 ### 为什么不是真正的"零配置"？
 
-由于本项目采用与Lombok类似的AST修改技术，需要访问javac编译器的内部API。JDK 17+引入了强模块化系统（JPMS），这些API默认不对外开放。
+由于本项目采用与Lombok类似的AST修改技术，需要访问javac编译器的内部API。JDK 21+引入了强模块化系统（JPMS），这些API默认不对外开放。
 
 **对比Lombok：**
 - Lombok也需要类似的配置（或使用专用的lombok.jar）
@@ -412,9 +412,9 @@ private String goodsTypeDesc;
 
 **解决方案**：
 
-1. **方案 1**: 切换到 JDK 17-23 使用(临时方案)
+1. **方案 1**: 切换到 JDK 21-23 使用(临时方案)
    ```bash
-   export JAVA_HOME=/path/to/jdk17
+   export JAVA_HOME=/path/to/jdk21
    mvn clean compile
    ```
 
@@ -492,7 +492,7 @@ private String goodsTypeDesc;
     <version>1.0.0</version>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
     </properties>
 
     <dependencies>
@@ -505,7 +505,7 @@ private String goodsTypeDesc;
         <dependency>
             <groupId>io.github.mocanjie</groupId>
             <artifactId>mydict-spring-boot-starter</artifactId>
-            <version>spring3</version>
+            <version>1.0-jdk21</version>
         </dependency>
 
         <!-- 可选：MyBatis-Plus支持 -->
@@ -523,14 +523,14 @@ private String goodsTypeDesc;
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
-            <!-- ⚠️ 必需配置：支持 JDK 17-24+ -->
+            <!-- ⚠️ 必需配置：支持 JDK 21-24+ -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <fork>true</fork>
                     <compilerArgs>
-                        <!-- JDK 17-23: Export javac internal APIs -->
+                        <!-- JDK 21-23: Export javac internal APIs -->
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
@@ -558,7 +558,7 @@ private String goodsTypeDesc;
 ### 编译要求
 
 - **推荐**: 使用 **JDK 24** 编译,以获得最佳跨版本兼容性
-- **最低**: JDK 17+
+- **最低**: JDK 21+
 
 ### 编译步骤
 
@@ -567,7 +567,7 @@ private String goodsTypeDesc;
 git clone https://github.com/mocanjie/mydict-spring-boot-starter.git
 cd mydict-spring-boot-starter
 
-# 2. 确保使用 JDK 24 (推荐) 或 JDK 17+
+# 2. 确保使用 JDK 24 (推荐) 或 JDK 21+
 java -version
 
 # 3. 编译并安装到本地 Maven 仓库
@@ -579,16 +579,16 @@ mvn clean install -DskipTests
 
 ### 为什么推荐用 JDK 24 编译?
 
-1. **向下兼容**: JDK 24 编译的 JAR 可以在 JDK 17+ 上运行
+1. **向下兼容**: JDK 24 编译的 JAR 可以在 JDK 21+ 上运行
 2. **模块系统**: JDK 24 的模块系统最严格,确保兼容性
 3. **未来保障**: 为未来的 JDK 版本做好准备
 
-> **⚠️ 注意**: 如果用 JDK 17 编译,在 JDK 24 环境可能遇到注解处理器不工作的问题。
+> **⚠️ 注意**: 如果用 JDK 21 编译,在 JDK 24 环境可能遇到注解处理器不工作的问题。
 
 ## 📝 更新日志
 
-### spring3-17 版本 (2024-2025)
-- ✅ 支持 JDK 17-24+ 和 Spring Boot 3.x
+### 1.0-jdk21 版本 (2025)
+- ✅ 支持 JDK 21-24+ 和 Spring Boot 3.x
 - ✅ 完整兼容 JDK 24 的严格模块系统
 - ✅ 移除对 tools.jar 的依赖
 - ✅ 现代化模块系统支持

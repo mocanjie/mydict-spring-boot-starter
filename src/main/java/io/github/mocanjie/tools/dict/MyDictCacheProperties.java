@@ -18,9 +18,9 @@ public class MyDictCacheProperties {
 
     /**
      * 缓存过期时间（秒）
-     * 默认：300秒（5分钟）
+     * 默认：30秒
      */
-    private long ttl = 300;
+    private long ttl = 30;
 
     /**
      * 缓存最大条目数
