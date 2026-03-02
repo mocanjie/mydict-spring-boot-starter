@@ -1,7 +1,6 @@
 package io.github.mocanjie.tools.dict;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
  * @author mocanjie
  */
 @Configuration
-@EnableConfigurationProperties(MyDictCacheProperties.class)
 public class DictAutoConfiguration {
 
     /**
